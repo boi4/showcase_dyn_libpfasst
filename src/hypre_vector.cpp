@@ -88,3 +88,19 @@ void HypreVector::Print(void)
    if (myid == 0) printf("\n");
   // HYPRE_StructVectorPrint("hypre_vector_data.txt", v, 1);
 }
+
+
+void HypreVector::Dump(char *fnam)
+{
+   std::ofstream o;
+   std::string fname{fnam};
+   o.open(fname);
+   double *values = GetBoxValues();
+   // for (int p = 0; p < num_procs; p++){
+   //    if (p == myid){
+   for (int i = 0; i < nrows; i++){
+      o << myid << "," << coords_x[i] << "," << coords_y[i] << "," << values[i] << std::endl;
+   }
+   //    }
+   // }
+}

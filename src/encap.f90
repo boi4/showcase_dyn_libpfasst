@@ -30,6 +30,7 @@ module encap
       procedure :: unpack => hypre_vector_unpack
       procedure :: axpy => hypre_vector_axpy
       procedure :: eprint => hypre_vector_eprint
+      procedure :: dump => hypre_vector_dump
    end type hypre_vector_encap
 
    interface
@@ -93,6 +94,12 @@ module encap
         use iso_c_binding
         type(c_ptr), value :: x
       end subroutine HypreVectorPrint
+
+      subroutine HypreVectorDump(x, fname) bind(c, name="HypreVectorDump")
+        use iso_c_binding
+        type(c_ptr), value :: x
+        character(c_char), dimension(*), intent(in) :: fname
+      end subroutine HypreVectorDump
 
       subroutine HypreVectorSetInitCond(x, val) bind(c, name="HypreVectorSetInitCond")
          use iso_c_binding
@@ -278,11 +285,26 @@ contains
     call HypreVectorPrint(this%c_hypre_vector_ptr)
   end subroutine hypre_vector_eprint
 
+  !>  Subroutine to print the array to the screen (mainly for debugging purposes)
+  subroutine hypre_vector_dump(this,fname)
+    class(hypre_vector_encap), intent(inout) :: this
+    character(len=*),          intent(in   ) :: fname
+
+    character(c_char), dimension(len(fname)+1) :: fname_c
+    integer :: i
+
+    ! Convert fname to fname_c
+    fname_c = transfer(trim(fname)//char(0), fname_c)
+
+    !  Print the  value
+    call HypreVectorDump(this%c_hypre_vector_ptr, fname_c)
+  end subroutine hypre_vector_dump
+
   !  Helper function to cast an abstract encap to the hypre_vector_encap
   function cast_as_hypre_vector(encap_polymorph) result(hypre_vector_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(hypre_vector_encap), pointer :: hypre_vector_obj
-    
+
     select type(encap_polymorph)
     type is (hypre_vector_encap)
        hypre_vector_obj => encap_polymorph

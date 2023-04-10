@@ -31,6 +31,7 @@ extern "C"
    double HypreVectorNorm(HypreVector *hypre_vector);
    void HypreVectorAxpy(HypreVector *y, double a, HypreVector *x);
    void HypreVectorPrint(HypreVector *hypre_vector);
+   void HypreVectorDump(HypreVector *hypre_vector, char *fname);
    void HypreSolverInit(HypreSolver **hypre_solver,
                         int pfasst_level_index,
                         int num_grid_points,

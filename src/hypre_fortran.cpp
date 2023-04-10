@@ -146,6 +146,11 @@ extern "C"
       hypre_vector->Print();
    }
 
+   void HypreVectorDump(HypreVector *hypre_vector, char *fname)
+   {
+      hypre_vector->Dump(fname);
+   }
+
    void HypreSolverInit(HypreSolver **hypre_solver, int pfasst_level_index, int num_grid_points, int comm_color, int space_dim, int max_iter, int max_levels, int spacial_coarsen_flag)
    {
       int level_index = PfasstToHypreLevelIndex(pfasst_level_index, max_levels);

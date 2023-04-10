@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include <iostream>
+#include <fstream>
 #include "_hypre_struct_mv.h"
 #include "_hypre_struct_ls.h"
 #include "HYPRE_struct_mv.h"

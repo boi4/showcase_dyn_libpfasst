@@ -20,6 +20,7 @@ class HypreVector: public HypreStruct {
       double Norm(void);
       void Axpy(double alpha, HypreVector *x);
       void Print(void);
+      void Dump(char *fnam);
 };
 
 #endif
