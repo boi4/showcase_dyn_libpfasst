@@ -6,6 +6,7 @@ module hooks
   use encap
   use pf_my_sweeper
   use probin
+  use global_state
   implicit none
 
   interface
@@ -56,6 +57,28 @@ contains
        call flush(6)
     end if
   end subroutine echo_error
+
+
+  subroutine dump_hook(pf, level_index)
+    type(pf_pfasst_t), intent(inout) :: pf
+    integer, intent(in) :: level_index
+
+    type(hypre_vector_encap) :: values
+    integer            :: space_color, time_color
+    character(len=1000) :: dump_dir
+    character(len=1000) :: fname
+
+    call get_global_str("dump_dir", dump_dir)
+    call get_global_int("time_color", time_color)
+    call get_global_int("space_color", space_color)
+
+    write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i1.1,A)") &
+         trim(adjustl(dump_dir)), "/dump_step", pf%state%step+1, &
+         "_time", time_color, "_space", space_color, "_level", level_index, ".csv"
+
+    values = cast_as_hypre_vector(pf%levels(level_index)%qend)
+    call values%dump(fname)
+  end subroutine dump_hook
 
 
 end module hooks

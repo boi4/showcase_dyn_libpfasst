@@ -17,10 +17,13 @@ module probin
   integer, save :: imex_stat
   integer, save :: ark_stat
   integer, save :: rk_order
+  logical, save :: dump_values  ! whether to dump the values
+  character(len=1000), save :: dump_dir  ! where to dump files
   character(len=128), save :: pfasst_nml  ! file for reading pfasst parameters
 
   namelist /params/ space_dim, num_grid_points, init_cond, nspace, ntime, dt, T0, Tfin, nsteps, pfasst_nml, max_space_v_cycles
   namelist /params/ mgrit_n_init, mgrit_refine_factor, imex_stat, ark_stat, solver_type, nsteps_rk, FAS_flag, rk_order, FCF_flag
+  namelist /params/ dump_dir, dump_values
 
 contains
   
@@ -70,6 +73,9 @@ contains
     FAS_flag = .false.
     FCF_flag = .true.
     solver_type = 0
+
+    dump_values = .false.
+    dump_dir = "dump"
     
     !>  Read in stuff from input file
     un = 9

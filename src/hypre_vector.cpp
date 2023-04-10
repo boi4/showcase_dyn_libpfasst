@@ -96,11 +96,8 @@ void HypreVector::Dump(char *fnam)
    std::string fname{fnam};
    o.open(fname);
    double *values = GetBoxValues();
-   // for (int p = 0; p < num_procs; p++){
-   //    if (p == myid){
+   if(!o) printf("Failed to open %s\n", fnam);
    for (int i = 0; i < nrows; i++){
       o << myid << "," << coords_x[i] << "," << coords_y[i] << "," << values[i] << std::endl;
    }
-   //    }
-   // }
 }

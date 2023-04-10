@@ -294,9 +294,9 @@ contains
     integer :: i
 
     ! Convert fname to fname_c
-    fname_c = transfer(trim(fname)//char(0), fname_c)
+    fname_c = transfer(trim(adjustl(fname))//char(0), fname_c)
 
-    !  Print the  value
+    ! Dump to the file
     call HypreVectorDump(this%c_hypre_vector_ptr, fname_c)
   end subroutine hypre_vector_dump
 
