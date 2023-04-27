@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+dumps
+dat
+hypre
