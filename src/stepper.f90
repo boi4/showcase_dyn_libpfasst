@@ -30,7 +30,7 @@ contains
     class(my_stepper_t), intent(inout) :: this
     type(pf_pfasst_t), intent(inout),target :: pf
     integer, intent(in) :: level_index
-    integer :: nx, comm_color, space_dim, max_space_v_cycles, spacial_coarsen_flag
+    integer :: nx, space_comm, space_dim, max_space_v_cycles, spacial_coarsen_flag
 
     if (solver_type .eq. 2) then
        this%nsteps=nsteps_rk(level_index)
@@ -51,7 +51,7 @@ contains
 
     ! Space variables
     nx = pf%levels(level_index)%lev_shape(1)
-    comm_color = pf%levels(level_index)%lev_shape(2)
+    space_comm = pf%levels(level_index)%lev_shape(2)
     space_dim = pf%levels(level_index)%lev_shape(3)
     max_space_v_cycles = pf%levels(level_index)%lev_shape(4)
     spacial_coarsen_flag = pf%levels(level_index)%lev_shape(10)
@@ -60,7 +60,7 @@ contains
     call HypreSolverInit(this%c_hypre_solver_ptr, &
                          level_index, &
                          nx, &
-                         comm_color, &
+                         space_comm, &
                          space_dim, &
                          max_space_v_cycles, &
                          pf%nlevels, &
