@@ -37,7 +37,7 @@ module encap
 
       subroutine HypreVectorCreate(x_ptr, &
                                    num_grid_points, &
-                                   comm_color, &
+                                   space_comm, &
                                    space_dim, &
                                    nrows, &
                                    ilower0, &
@@ -46,7 +46,7 @@ module encap
                                    iupper1) bind(c, name="HypreVectorCreate")
          use iso_c_binding
          type(c_ptr) :: x_ptr
-         integer, value :: num_grid_points, comm_color, space_dim
+         integer, value :: num_grid_points, space_comm, space_dim
          integer, value :: nrows, ilower0, ilower1, iupper0, iupper1
       end subroutine HypreVectorCreate
     
@@ -119,11 +119,11 @@ contains
     integer,               intent(in   ) ::  level_index ! passed by default,  not needed here
     integer,               intent(in   ) ::  lev_shape(:) ! passed by default, not needed here
     integer :: ierr
-    integer :: num_grid_points, comm_color, n_space, space_dim, max_space_v_cycles
+    integer :: num_grid_points, space_comm, n_space, space_dim, max_space_v_cycles
     integer :: nrows, ilower0, ilower1, iupper0, iupper1
 
     num_grid_points = lev_shape(1)
-    comm_color = lev_shape(2)
+    space_comm = lev_shape(2)
     space_dim = lev_shape(3)
     max_space_v_cycles = lev_shape(4)
     nrows = lev_shape(5)
@@ -137,7 +137,7 @@ contains
 
     select type(x)
     type is (hypre_vector_encap)
-       call HypreVectorCreate(x%c_hypre_vector_ptr, num_grid_points, comm_color, space_dim, &
+       call HypreVectorCreate(x%c_hypre_vector_ptr, num_grid_points, space_comm, space_dim, &
                               nrows, ilower0, ilower1, iupper0, iupper1)
        x%vector_size = nrows
     end select
@@ -151,11 +151,14 @@ contains
     integer,               intent(in   ) ::  level_index ! passed by default,  not needed here
     integer,               intent(in   ) ::  lev_shape(:) ! passed by default, not needed here
     integer :: i, ierr
-    integer :: num_grid_points, comm_color, n_space, space_dim, max_space_v_cycles
+    integer :: num_grid_points, space_comm, n_space, space_dim, max_space_v_cycles
     integer :: nrows, ilower0, ilower1, iupper0, iupper1
 
     num_grid_points = lev_shape(1)
-    comm_color = lev_shape(2)
+    space_comm = lev_shape(2)
+    call mpi_barrier(space_comm, ierr);
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi_barrier fail, error=',ierr)
+    print *, "Barrier passsed"
     space_dim = lev_shape(3)
     max_space_v_cycles = lev_shape(4)
     nrows = lev_shape(5)
@@ -170,7 +173,7 @@ contains
     select type(x)
     type is (hypre_vector_encap)
        do i = 1, n
-           call HypreVectorCreate(x(i)%c_hypre_vector_ptr, num_grid_points, comm_color, space_dim, &
+           call HypreVectorCreate(x(i)%c_hypre_vector_ptr, num_grid_points, space_comm, space_dim, &
                                   nrows, ilower0, ilower1, iupper0, iupper1)
            x(i)%vector_size = nrows
        end do

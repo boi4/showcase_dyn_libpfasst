@@ -38,10 +38,7 @@ contains
     integer :: ios,iostat
     integer :: i   !  loop variable
     integer :: un  !  file read unit
-    integer :: nproc, rank, error
-
-    call mpi_comm_size(MPI_COMM_WORLD, nproc, error)
-    call mpi_comm_rank(MPI_COMM_WORLD, rank,  error)
+    integer :: error
 
     !> Set the name of the input file
     probin_fname = "probin.nml" ! default file name - can be overwritten on the command line
@@ -53,7 +50,7 @@ contains
     nsteps_rk = -1
 
     nspace = 1
-    ntime = nproc
+    ntime = -1
     num_grid_points = 3
     init_cond = 50.0
     space_dim = 2
@@ -109,10 +106,6 @@ contains
     integer,           intent(in   ), optional :: un_opt
     integer :: un = 6
     
-    integer :: nproc, rank, error
-
-    call mpi_comm_size(MPI_COMM_WORLD, nproc, error)
-    call mpi_comm_rank(MPI_COMM_WORLD, rank,  error)
 
     if (pf%rank /= 0) return
     if (present(un_opt)) un = un_opt
@@ -121,26 +114,24 @@ contains
     call pf_print_options(pf,un_opt=un)
 
 
-    if (rank == 0) then
-       !  Print out the local parameters
-       write(un,*) '=================================================='
-       write(un,*) ' '
-       write(un,*) 'Local Variables'
-       write(un,*) '----------------'
-       write(un,*) 'nsteps: ', nsteps, '! Number of steps'
-       write(un,*) 'Dt:     ', Dt, '! Time step size'
-       write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
-       write(un,*) 'num spatial grid points (on each side of square domain) per processor:   ', num_grid_points
-       write(un,*) 'num spatial procs per temporal proc:   ',   nspace
-       write(un,*) 'num temporal procs:   ',   ntime  
-       write(un,*) 'Constant initial condition:   ', init_cond
-       write(un,*) 'Number of spacial dimensions:   ', space_dim
-       write(un,*) 'Number of Hypre V-cycles:   ', max_space_v_cycles
-   
-   
-       write(un,*) 'PFASST parameters read from input file ', pfasst_nml
-       write(un,*) '=================================================='
-    end if
+    !  Print out the local parameters
+    write(un,*) '=================================================='
+    write(un,*) ' '
+    write(un,*) 'Local Variables'
+    write(un,*) '----------------'
+    write(un,*) 'nsteps: ', nsteps, '! Number of steps'
+    write(un,*) 'Dt:     ', Dt, '! Time step size'
+    write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
+    write(un,*) 'num spatial grid points (on each side of square domain) per processor:   ', num_grid_points
+    write(un,*) 'num spatial procs per temporal proc:   ',   nspace
+    write(un,*) 'num temporal procs:   ',   ntime
+    write(un,*) 'Constant initial condition:   ', init_cond
+    write(un,*) 'Number of spacial dimensions:   ', space_dim
+    write(un,*) 'Number of Hypre V-cycles:   ', max_space_v_cycles
+
+
+    write(un,*) 'PFASST parameters read from input file ', pfasst_nml
+    write(un,*) '=================================================='
   end subroutine print_loc_options
   
 end module probin

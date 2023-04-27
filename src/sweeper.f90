@@ -24,16 +24,16 @@ module pf_my_sweeper
 
   interface
 
-     subroutine HypreSolverInit(hypre_solver_ptr, level_index, nx, comm_color, space_dim, max_iter, num_levels, spacial_coarsen_flag) bind(c, name="HypreSolverInit")
+     subroutine HypreSolverInit(hypre_solver_ptr, level_index, nx, space_comm, space_dim, max_iter, num_levels, spacial_coarsen_flag) bind(c, name="HypreSolverInit")
         use iso_c_binding
         type(c_ptr) :: hypre_solver_ptr
-        integer, value :: nx, level_index, comm_color, space_dim, max_iter, num_levels, spacial_coarsen_flag
+        integer, value :: nx, level_index, space_comm, space_dim, max_iter, num_levels, spacial_coarsen_flag
      end subroutine HypreSolverInit
 
-     subroutine HypreImplicitSolverInit(hypre_solver_ptr, level_index, nx, comm_color, space_dim, max_iter, num_levels, dtq) bind(c, name="HypreImplicitSolverInit")
+     subroutine HypreImplicitSolverInit(hypre_solver_ptr, level_index, nx, space_comm, space_dim, max_iter, num_levels, dtq) bind(c, name="HypreImplicitSolverInit")
         use iso_c_binding
         type(c_ptr) :: hypre_solver_ptr
-        integer, value :: nx, level_index, comm_color, space_dim, max_iter, num_levels
+        integer, value :: nx, level_index, space_comm, space_dim, max_iter, num_levels
         real(c_double), value :: dtq
      end subroutine HypreImplicitSolverInit
    
@@ -107,7 +107,7 @@ contains
     class(my_sweeper_t), intent(inout) :: this
     type(pf_pfasst_t), intent(inout),target :: pf
     integer, intent(in) :: level_index
-    integer :: nx, comm_color, space_dim, max_space_v_cycles, spacial_coarsen_flag
+    integer :: nx, space_comm, space_dim, max_space_v_cycles, spacial_coarsen_flag
  
     !>  Call the imex sweeper initialization
     call this%imex_initialize(pf,level_index)
@@ -125,7 +125,7 @@ contains
 
     ! Space variables
     nx = pf%levels(level_index)%lev_shape(1)
-    comm_color = pf%levels(level_index)%lev_shape(2)
+    space_comm = pf%levels(level_index)%lev_shape(2)
     space_dim = pf%levels(level_index)%lev_shape(3)
     max_space_v_cycles = pf%levels(level_index)%lev_shape(4)
     spacial_coarsen_flag = pf%levels(level_index)%lev_shape(10)
@@ -134,7 +134,7 @@ contains
     call HypreSolverInit(this%c_hypre_solver_ptr, &
                          level_index, &
                          nx, &
-                         comm_color, &
+                         space_comm, &
                          space_dim, &
                          max_space_v_cycles, &
                          pf%nlevels, &

@@ -10,23 +10,25 @@
 !>  The main program here just initializes mpi, calls the solver and then finalizes mpi
 program main
   use pf_mod_mpi
+  implicit none
 
-  integer ::  ierror
+  integer ::  ierr
+  integer :: session
 
-  !> Initialize MPI
-  call mpi_init(ierror)
-  if (ierror /= 0) &
-       stop "ERROR: Can't initialize MPI."
+  !> Initialize MPI Session
+  call mpi_session_init(MPI_INFO_NULL, MPI_ERRHANDLER_NULL, session, ierr)
+  if (ierr /= 0) &
+      stop "ERROR: Can't initialize MPI."
 
   !> Call the  solver 
-  call run_pfasst()
+  call run_pfasst(session)
 
   !> Close mpi
-  call mpi_finalize(ierror)
+  call mpi_session_finalize(session, ierr)
 
 contains
   !>  This subroutine set ups and calls libpfasst 
-  subroutine run_pfasst()  
+  subroutine run_pfasst(session)
     use pfasst            !< This module has include statements for the main pfasst routines
     use pf_my_sweeper     !< Local module for sweeper
     use pf_my_level       !< Local module for level
@@ -39,6 +41,11 @@ contains
     use global_state
 
     implicit none
+
+    !> argument
+    integer, intent(in) :: session
+    integer mcomm
+    integer mgroup
 
     !>  Local variables
     type(pf_pfasst_t) :: pf        !<  the main pfasst structure
@@ -60,6 +67,7 @@ contains
     integer :: level_index
 
     integer :: nproc, rank, error
+    integer :: ierr
     real(pfdp) :: f
     integer :: nrows, ilower0, ilower1, iupper0, iupper1
     integer :: spacial_coarsen_flag
@@ -69,15 +77,22 @@ contains
     integer :: tmp
     character(len=100) :: tmpstr
 
+    call mpi_group_from_session_pset(session, "mpi://world", mgroup, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group from pset fail, error=',ierr)
+    call mpi_comm_create_from_group(mgroup, "showcase", MPI_INFO_NULL, MPI_ERRORS_RETURN, mcomm, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm create from group fail, error=',ierr)
+    call mpi_group_free(mgroup, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group free fail, error=',ierr)
+
     ! check size
-    call mpi_comm_size(MPI_COMM_WORLD, nproc, error)
-    call mpi_comm_rank(MPI_COMM_WORLD, rank,  error)
+    call mpi_comm_size(mcomm, nproc, error)
+    call mpi_comm_rank(mcomm, rank,  error)
 
     !> Read problem parameters
     call probin_init(pf_fname)
 
     n = num_grid_points * num_grid_points
-    call create_simple_communicators(nspace, ntime, space_comm, time_comm, space_color, time_color, space_dim)
+    call create_simple_communicators(mcomm, nspace, ntime, space_comm, time_comm, space_color, time_color, space_dim)
 
     !>  Set up communicator
     call pf_mpi_create(comm, time_comm)
@@ -99,7 +114,9 @@ contains
     end if
 
     spacial_coarsen_flag = 0
-    call PfasstHypreInit(pf, mg_ld, lev_shape, space_color, time_color, spacial_coarsen_flag)
+    call mpi_barrier(space_comm, ierr);
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
+    call PfasstHypreInit(pf, mg_ld, lev_shape, space_comm, time_color, spacial_coarsen_flag)
     print *, "PfasstHypreInit done"
     print *,time_color,space_color,pf%rank
     
@@ -127,7 +144,9 @@ contains
     end if
 
     !>  Output run parameters
-    call print_loc_options(pf,un_opt=6)
+    if (space_color == 0 .and. time_color == 0) then
+        call print_loc_options(pf,un_opt=6)
+    end if
 
     level_index = pf%nlevels
     !> Set the initial condition
@@ -167,21 +186,23 @@ contains
     ! if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
     ! call y_end%eprint()
 
-!    if (space_color == ntime - 1) then
-!       ! coarse grid solution
-!       !write(filename, "(A,i1,A)") "data/final_cdump_", time_color, ".csv"
-!       !y_other = cast_as_hypre_vector(pf%levels(1)%qend)
-!       !call y_other%dump(filename)
-!
-!       write(filename, "(A,i1,A)") "data/final_dump_", time_color, ".csv"
-!       call y_end%dump(filename)
-!    end if
+    if (dump_values .and. space_color == ntime-1) then
+       ! coarse grid solution
+       !write(filename, "(A,i1,A)") "data/final_cdump_", time_color, ".csv"
+       !y_other = cast_as_hypre_vector(pf%levels(1)%qend)
+       !call y_other%dump(filename)
+
+       write(fname, "(A, A,i1,A)") trim(adjustl(dump_dir)), "/final_dump_", time_color, ".csv"
+       call y_end%dump(fname)
+    end if
 
     !>  Wait for everyone to be done
-    call mpi_barrier(MPI_COMM_WORLD, ierror)
+    call mpi_barrier(mcomm, ierr)
     
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
+
+    call mpi_comm_free(mcomm, ierr)
 
   end subroutine run_pfasst
 end program

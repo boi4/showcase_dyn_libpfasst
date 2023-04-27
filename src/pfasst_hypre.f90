@@ -9,11 +9,11 @@ module pfasst_hypre
   implicit none
 contains
 
-  subroutine PfasstHypreInit(pf, mg_ld, lev_shape, space_color, time_color, spacial_coarsen_flag) 
+  subroutine PfasstHypreInit(pf, mg_ld, lev_shape, space_comm, time_color, spacial_coarsen_flag)
     type(pf_pfasst_t), intent(inout) :: pf
     type(mgrit_level_data), allocatable, intent(inout) :: mg_ld(:)
     integer, allocatable, intent(inout) :: lev_shape(:,:)
-    integer, intent(in) :: space_color, time_color
+    integer, intent(in) :: space_comm, time_color
     integer, intent(in) :: spacial_coarsen_flag
     
     type(pf_comm_t) :: comm
@@ -25,7 +25,6 @@ contains
     integer :: n, m
     integer :: level_index
 
-    integer :: nproc, rank, error
     real(pfdp) :: f
     integer :: nrows, ilower0, ilower1, iupper0, iupper1
     integer :: n_init, refine_factor, FComp_setup_flag
@@ -36,17 +35,13 @@ contains
     else
        FComp_setup_flag = 1
     end if
-    
-
-    call mpi_comm_size(MPI_COMM_WORLD, nproc, error)
-    call mpi_comm_rank(MPI_COMM_WORLD, rank,  error)
 
 
     allocate(lev_shape(pf%nlevels,10))
     !> Loop over levels and set some level specific parameters
     do l = 1,pf%nlevels
        lev_shape(l,1) = num_grid_points
-       lev_shape(l,2) = space_color
+       lev_shape(l,2) = space_comm
        lev_shape(l,3) = space_dim
        lev_shape(l,4) = max_space_v_cycles
        lev_shape(l,10) = spacial_coarsen_flag
@@ -80,7 +75,7 @@ contains
           call HypreSolverInit(st_finest%c_hypre_solver_ptr, &
                                l_finest, &
                                num_grid_points, &
-                               space_color, &
+                               space_comm, &
                                space_dim, &
                                max_space_v_cycles, &
                                pf%nlevels, &
@@ -94,7 +89,7 @@ contains
              call HypreSolverInit(st_lev%c_hypre_solver_ptr, &
                                   l, &
                                   num_grid_points, &
-                                  space_color, &
+                                  space_comm, &
                                   space_dim, &
                                   max_space_v_cycles, &
                                   pf%nlevels, &
@@ -121,7 +116,7 @@ contains
           call HypreSolverInit(sw_finest%c_hypre_solver_ptr, &
                                l_finest, &
                                num_grid_points, &
-                               space_color, &
+                               space_comm, &
                                space_dim, &
                                max_space_v_cycles, &
                                pf%nlevels, &
@@ -136,7 +131,7 @@ contains
              call HypreSolverInit(sw_lev%c_hypre_solver_ptr, &
                                   l, &
                                   num_grid_points, &
-                                  space_color, &
+                                  space_comm, &
                                   space_dim, &
                                   max_space_v_cycles, &
                                   pf%nlevels, &
@@ -188,7 +183,7 @@ contains
              call HypreImplicitSolverInit(st_lev%c_hypre_solver_ptr, &
                                           l, &
                                           num_grid_points, &
-                                          space_color, &
+                                          space_comm, &
                                           space_dim, &
                                           max_space_v_cycles, &
                                           pf%nlevels, &
@@ -200,7 +195,7 @@ contains
              call HypreImplicitSolverInit(sw_lev%c_hypre_solver_ptr, &
                                           l, &
                                           num_grid_points, &
-                                          space_color, &
+                                          space_comm, &
                                           space_dim, &
                                           max_space_v_cycles, &
                                           pf%nlevels, &
