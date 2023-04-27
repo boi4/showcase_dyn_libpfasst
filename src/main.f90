@@ -98,20 +98,11 @@ contains
     call pf_mpi_create(comm, time_comm)
     
 
-    if ((solver_type .eq. 1) .or. (solver_type .eq. 2) .or. (solver_type .eq. 3)) then
-       pf%use_rk_stepper = .true.
-       pf%use_sdc_sweeper = .false.
-    else
-       pf%use_rk_stepper = .false.
-       pf%use_sdc_sweeper = .true.
-    end if
+    pf%use_rk_stepper = .false.
+    pf%use_sdc_sweeper = .true.
 
     !>  Create the pfasst structure
     call pf_pfasst_create(pf, comm, fname=pf_fname)
-    if ((solver_type .eq. 2) .and. (pf%nlevels .ne. 2)) then
-       print *, 'ERROR: nlevels must be 2 for Parareal.'
-       return
-    end if
 
     spacial_coarsen_flag = 0
     call mpi_barrier(space_comm, ierr);
@@ -119,18 +110,9 @@ contains
     call PfasstHypreInit(pf, mg_ld, lev_shape, space_comm, time_color, spacial_coarsen_flag)
     print *, "PfasstHypreInit done"
     print *,time_color,space_color,pf%rank
-    
-    ! !>  Add some hooks for output
-    ! if (solver_type .eq. 1) then
-    !    call pf_add_hook(pf, -1, PF_POST_ITERATION, echo_error)
-    ! else
-    !    !call pf_add_hook(pf, -1, PF_POST_SWEEP, echo_error)
-    !    call pf_add_hook(pf, -1, PF_POST_ITERATION, echo_error)
-    ! end if
-    ! call pf_add_hook(pf, -1, PF_POST_BLOCK, print_sol)
-    ! call pf_add_hook(pf, -1, PF_POST_PREDICTOR, ppred)
-    ! call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
-    ! call pf_add_hook(pf, -1, PF_POST_SWEEP, pstep)
+
+    ! hooks
+    call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
 
     if (dump_values) then
         ! Save some global variables for the dump hook
@@ -170,28 +152,10 @@ contains
 
 
     !> Do the PFASST time stepping
-    if (solver_type .eq. 1) then
-       call pf_MGRIT_run(pf, mg_ld, y_0, y_end)
-    else if (solver_type .eq. 2) then
-       call pf_parareal_run(pf, y_0, dt, Tfin, nsteps, y_end)
-    else if (solver_type .eq. 3) then
-       call initialize_results(pf)
-       if (pf%save_timings > 0) call pf_start_timer(pf, T_TOTAL)
-       call pf%levels(1)%ulevel%stepper%do_n_steps(pf, 1, T0, y_0, y_end, dt, nsteps)
-       if (pf%save_timings > 0) call pf_stop_timer(pf, T_TOTAL)
-       call pf_dump_stats(pf)
-    else
-       call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end)
-    end if
-    ! if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
-    ! call y_end%eprint()
+    call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end)
+    if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
 
     if (dump_values .and. space_color == ntime-1) then
-       ! coarse grid solution
-       !write(filename, "(A,i1,A)") "data/final_cdump_", time_color, ".csv"
-       !y_other = cast_as_hypre_vector(pf%levels(1)%qend)
-       !call y_other%dump(filename)
-
        write(fname, "(A, A,i1,A)") trim(adjustl(dump_dir)), "/final_dump_", time_color, ".csv"
        call y_end%dump(fname)
     end if
@@ -202,6 +166,7 @@ contains
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
 
+    !> Free the communicator
     call mpi_comm_free(mcomm, ierr)
 
   end subroutine run_pfasst

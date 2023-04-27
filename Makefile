@@ -30,7 +30,7 @@ EXE = main.exe
 # will set debug flags if DEBUG=TRUE
 include $(LIBPFASST)/Makefile.defaults
 
-FSRC = src/global_state.f90 src/comm.f90 src/level.f90 src/sweeper.f90 src/stepper.f90 src/hooks.f90 src/probin.f90 src/encap.f90 src/pfasst_hypre.f90 src/main.f90
+FSRC = src/global_state.f90 src/comm.f90 src/level.f90 src/sweeper.f90 src/hooks.f90 src/probin.f90 src/encap.f90 src/pfasst_hypre.f90 src/main.f90
 CSRC = src/global_fortran_state.cpp src/hypre_struct.cpp src/hypre_vector.cpp src/hypre_solver.cpp src/hypre_fortran.cpp
 
 OBJ  = $(subst src, build,$(FSRC:.f90=.o))

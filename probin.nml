@@ -6,6 +6,7 @@
 &PF_PARAMS
     nlevels = 2 !  must be set
 
+    !niters = 20  !  default is 5
     niters = 20  !  default is 5
     nnodes = 2 3
 
@@ -33,28 +34,31 @@
 &PARAMS
 
     T0 = 0.0
-    Tfin = 1
-    nsteps = 2
+    Tfin = 10
+    nsteps = 8
     num_grid_points = 128
-    nspace = 1
-    ntime = 1
+    nspace = 4
+    ntime = 2
     init_cond = 50.0
     space_dim = 2
     max_space_v_cycles = 50
 
-    mgrit_n_init = 4
-    mgrit_refine_factor = 2
-
-    solver_type = 1
-
     nsteps_rk = 1 1
 
+    ! 0 -> explicit, no implicit
+    ! 1 -> no explicit, implicit
+    ! 2 -> explicit, implicit
     imex_stat=1
     ark_stat=1
 
     rk_order=4
 
+
+    ! only relevant for mgrit
+    mgrit_n_init = 4
+    mgrit_refine_factor = 2
     FAS_flag = .false.
     FCF_flag = .false.
 
+    dump_values = .true.
 /
