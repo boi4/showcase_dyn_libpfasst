@@ -156,9 +156,6 @@ contains
 
     num_grid_points = lev_shape(1)
     space_comm = lev_shape(2)
-    call mpi_barrier(space_comm, ierr);
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi_barrier fail, error=',ierr)
-    print *, "Barrier passsed"
     space_dim = lev_shape(3)
     max_space_v_cycles = lev_shape(4)
     nrows = lev_shape(5)

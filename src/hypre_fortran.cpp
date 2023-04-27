@@ -155,14 +155,6 @@ void HypreSolverInit(HypreSolver **hypre_solver, int pfasst_level_index,
     if (*hypre_solver == nullptr) {
       if (glob_space_comm == MPI_COMM_NULL) {
         newcomm = MPI_Comm_f2c(fspace_comm);
-        int ierr = MPI_Barrier(newcomm);
-        int rank;
-        MPI_Comm_rank(newcomm, &rank);
-        printf("rank %d\n", rank);
-        if (ierr != 0) {
-           printf("Fail\n");
-           exit(1);
-        }
       } else {
         newcomm = glob_space_comm;
       }
