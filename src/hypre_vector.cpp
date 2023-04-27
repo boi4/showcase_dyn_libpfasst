@@ -74,19 +74,24 @@ double HypreVector::Norm(void)
 
 void HypreVector::Print(void)
 {
+   if (nrows > 0)  {
    double *values = GetBoxValues();
-   if (myid == 0) printf("\n");
-   for (int p = 0; p < num_procs; p++){
-      if (p == myid){  
-         for (int i = 0; i < nrows; i++){
-            //printf("%d %e %e %.16f\n", myid, coords_x[i], coords_y[i], values[i]);
-            printf("%.16f\n", values[i]);
-         }
-      }
-      MPI_Barrier(comm);
+   printf("%d: %.8g %.8g %.8g\n", nrows, values[nrows / 3], values[nrows / 4], values[nrows / 5]);
+   } else {
+      printf("Warning: trying to print empty?? vector\n");
    }
-   if (myid == 0) printf("\n");
-  // HYPRE_StructVectorPrint("hypre_vector_data.txt", v, 1);
+  //  if (myid == 0) printf("\n");
+  //  for (int p = 0; p < num_procs; p++){
+  //     if (p == myid){
+  //        for (int i = 0; i < nrows; i++){
+  //           //printf("%d %e %e %.16f\n", myid, coords_x[i], coords_y[i], values[i]);
+  //           printf("%.16f\n", values[i]);
+  //        }
+  //     }
+  //     MPI_Barrier(comm);
+  //  }
+  //  if (myid == 0) printf("\n");
+  // // HYPRE_StructVectorPrint("hypre_vector_data.txt", v, 1);
 }
 
 

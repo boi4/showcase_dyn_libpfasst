@@ -130,6 +130,7 @@ contains
     ! call pf_add_hook(pf, -1, PF_POST_BLOCK, print_sol)
     ! call pf_add_hook(pf, -1, PF_POST_PREDICTOR, ppred)
     ! call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
+    ! call pf_add_hook(pf, -1, PF_POST_SWEEP, pstep)
 
     if (dump_values) then
         ! Save some global variables for the dump hook
@@ -141,6 +142,7 @@ contains
         call system('mkdir -p ' // trim(adjustl(dump_dir)))
 
         call pf_add_hook(pf, -1, PF_POST_BLOCK, dump_hook)
+        !call pf_add_hook(pf, -1, PF_POST_PREDICTOR, dump_hook)
     end if
 
     !>  Output run parameters
@@ -158,11 +160,9 @@ contains
 
     ! dump initial values
     if (dump_values) then
-        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A)") trim(adjustl(dump_dir)), "/dump_step", 0, "_time", time_color, "_space", space_color, ".csv"
-
-        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i1.1,A)") &
+        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
             trim(adjustl(dump_dir)), "/dump_step", 0, &
-            "_time", time_color, "_space", space_color, "_level", 1, ".csv"
+            "_time", time_color, "_space", space_color, "_level", 2, ".csv"
         call y_0%dump(fname)
     end if
 
