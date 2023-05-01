@@ -77,7 +77,17 @@ contains
     integer :: tmp
     character(len=100) :: tmpstr
 
-    call mpi_group_from_session_pset(session, "mpi://world", mgroup, ierr)
+    character(len=MPI_MAX_PSET_NAME_LEN)  :: time_pset
+    integer :: ntime
+
+    ! TODO: time color and ntime
+
+    !> Read problem parameters
+    call probin_init(pf_fname)
+
+
+
+    call mpi_group_from_session_pset(session, "mpi://WORLD", mgroup, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group from pset fail, error=',ierr)
     call mpi_comm_create_from_group(mgroup, "showcase", MPI_INFO_NULL, MPI_ERRORS_RETURN, mcomm, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm create from group fail, error=',ierr)
@@ -88,11 +98,9 @@ contains
     call mpi_comm_size(mcomm, nproc, error)
     call mpi_comm_rank(mcomm, rank,  error)
 
-    !> Read problem parameters
-    call probin_init(pf_fname)
-
-    n = num_grid_points * num_grid_points
-    call create_simple_communicators(mcomm, nspace, ntime, space_comm, time_comm, space_color, time_color, space_dim)
+    print *,"nspace: ", nspace
+    call create_pset_grid(session, "mpi://WORLD", mcomm, nspace, space_dim, &
+         space_comm, space_color, time_comm, time_color, time_pset)
 
     !>  Set up communicator
     call pf_mpi_create(comm, time_comm)
@@ -140,25 +148,25 @@ contains
     y_end = cast_as_hypre_vector(y_end_base)
     call initial(y_0)
 
-    ! dump initial values
-    if (dump_values) then
-        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
-            trim(adjustl(dump_dir)), "/dump_step", 0, &
-            "_time", time_color, "_space", space_color, "_level", 2, ".csv"
-        call y_0%dump(fname)
-    end if
-
-    print *, "initial done"
-
-
-    !> Do the PFASST time stepping
-    call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end)
-    if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
-
-    if (dump_values .and. space_color == ntime-1) then
-       write(fname, "(A, A,i1,A)") trim(adjustl(dump_dir)), "/final_dump_", time_color, ".csv"
-       call y_end%dump(fname)
-    end if
+!    ! dump initial values
+!    if (dump_values) then
+!        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
+!            trim(adjustl(dump_dir)), "/dump_step", 0, &
+!            "_time", time_color, "_space", space_color, "_level", 2, ".csv"
+!        call y_0%dump(fname)
+!    end if
+!
+!    print *, "initial done"
+!
+!
+!    !> Do the PFASST time stepping
+!    call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end)
+!    if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
+!
+!    if (dump_values .and. space_color == ntime-1) then
+!       write(fname, "(A, A,i1,A)") trim(adjustl(dump_dir)), "/final_dump_", time_color, ".csv"
+!       call y_end%dump(fname)
+!    end if
 
     !>  Wait for everyone to be done
     call mpi_barrier(mcomm, ierr)

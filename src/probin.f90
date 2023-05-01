@@ -7,7 +7,7 @@ module probin
   use pf_mod_mpi
 
   !  The namlist for local variables
-  integer, save :: num_grid_points, nspace, ntime, space_dim, max_space_v_cycles
+  integer, save :: num_grid_points, nspace, space_dim, max_space_v_cycles
   integer, save :: mgrit_n_init, mgrit_refine_factor, nsteps_rk(PF_MAXLEVS)
   logical, save :: FAS_flag, FCF_flag
   real(pfdp), save :: init_cond
@@ -22,7 +22,7 @@ module probin
   character(len=1000), save :: dump_dir  ! where to dump files
   character(len=128), save :: pfasst_nml  ! file for reading pfasst parameters
 
-  namelist /params/ space_dim, num_grid_points, init_cond, nspace, ntime, dt, T0, Tfin, nsteps, pfasst_nml, max_space_v_cycles
+  namelist /params/ space_dim, num_grid_points, init_cond, nspace, dt, T0, Tfin, nsteps, pfasst_nml, max_space_v_cycles
   namelist /params/ mgrit_n_init, mgrit_refine_factor, imex_stat, ark_stat, nsteps_rk, FAS_flag, rk_order, FCF_flag
   namelist /params/ dump_dir, dump_values
 
@@ -51,7 +51,6 @@ contains
     nsteps_rk = -1
 
     nspace = 1
-    ntime = -1
     num_grid_points = 3
     init_cond = 50.0
     space_dim = 2
@@ -124,7 +123,7 @@ contains
     write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
     write(un,*) 'num spatial grid points (on each side of square domain) per processor:   ', num_grid_points
     write(un,*) 'num spatial procs per temporal proc:   ',   nspace
-    write(un,*) 'num temporal procs:   ',   ntime
+    ! write(un,*) 'num temporal procs:   ',   ntime
     write(un,*) 'Constant initial condition:   ', init_cond
     write(un,*) 'Number of spacial dimensions:   ', space_dim
     write(un,*) 'Number of Hypre V-cycles:   ', max_space_v_cycles
