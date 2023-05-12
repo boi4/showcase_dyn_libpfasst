@@ -66,13 +66,14 @@ contains
     call get_global_str("dump_dir", dump_dir)
     call get_global_int("time_color", time_color)
     call get_global_int("space_color", space_color)
+    print *, "Dumping, space color=", space_color, " time color=", time_color
 
-    print *, "ppred"
     write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
          trim(adjustl(dump_dir)), "/dump_step", pf%state%step+1, &
          "_time", time_color, "_space", space_color, "_level", level_index, ".csv"
 
     values = cast_as_hypre_vector(pf%levels(level_index)%qend)
+    print *, "Dumping to ", trim(fname)
     call values%dump(fname)
   end subroutine dump_hook
 

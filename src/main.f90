@@ -32,24 +32,21 @@ contains
     use pfasst            !< This module has include statements for the main pfasst routines
     use pf_my_sweeper     !< Local module for sweeper
     use pf_my_level       !< Local module for level
+    use pf_space_comm     !< Local module for communication
     use hooks             !< Local module for diagnostics and i/o
     use probin            !< Local module reading/parsing problem parameters
     use encap             !< Local module defining the encapsulation
-    use pf_space_comm
     use pfasst_hypre
-    use pf_mod_parareal
     use global_state
 
     implicit none
 
     !> argument
     integer, intent(in) :: session
-    integer mcomm
-    integer mgroup
 
     !>  Local variables
-    type(pf_pfasst_t) :: pf        !<  the main pfasst structure
-    type(pf_comm_t) :: comm      !<  the communicator (here it is mpi)
+    type(pf_pfasst_t) :: pf              !<  the main pfasst structure
+    type(pf_dynprocs_t) :: dynprocs      !<  the dynprocs object
     type(hypre_vector_encap) :: y_0      !<  the initial condition
     type(hypre_vector_encap) :: y_end    !<  the solution at the final time
     type(hypre_vector_encap) :: y_other
@@ -66,63 +63,90 @@ contains
     integer :: space_comm, time_comm, space_color, time_color
     integer :: level_index
 
+    real(pfdp) :: nspace_real
     integer :: nproc, rank, error
     integer :: ierr
     real(pfdp) :: f
     integer :: nrows, ilower0, ilower1, iupper0, iupper1
     integer :: spacial_coarsen_flag
-    type(mgrit_level_data), allocatable :: mg_ld(:)
     character(len=1000) :: fname
-
-    integer :: tmp
-    character(len=100) :: tmpstr
-
-    character(len=MPI_MAX_PSET_NAME_LEN)  :: time_pset
     integer :: ntime
-
-    ! TODO: time color and ntime
+    character(len=MPI_MAX_PSET_NAME_LEN)  :: time_pset
+    logical :: is_dynamic
+    logical :: premature_exit
+    integer :: tmp_int
+    character(len=*), parameter :: ESC = achar(27)
+    character(len=9) :: COLORS(10) =[&
+"[0;31m", &
+"[0;32m", &
+"[0;33m", &
+"[0;34m", &
+"[0;35m", &
+"[0;36m", &
+"[0;91m", &
+"[0;92m", &
+"[0;93m", &
+"[0;94m" &
+]
 
     !> Read problem parameters
     call probin_init(pf_fname)
 
+    ! for now, nspace must be a perfect square
+    if (space_dim .eq. 2) then
+       nspace_real = sqrt(real(nspace))
+       if (nspace_real .ne. nint(nspace_real)) then
+          print'(a)', 'ERROR: create_simple_communicators: nspace must be perfect square.'
+          stop
+       end if
+    end if
 
 
-    call mpi_group_from_session_pset(session, "mpi://WORLD", mgroup, ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group from pset fail, error=',ierr)
-    call mpi_comm_create_from_group(mgroup, "showcase", MPI_INFO_NULL, MPI_ERRORS_RETURN, mcomm, ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm create from group fail, error=',ierr)
-    call mpi_group_free(mgroup, ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group free fail, error=',ierr)
+    ! split up processes into grid
+    call create_pset_grid(session, "mpi://WORLD", nspace, space_dim, &
+                          space_comm, space_color, time_comm, time_color, time_pset)
 
-    ! check size
-    call mpi_comm_size(mcomm, nproc, error)
-    call mpi_comm_rank(mcomm, rank,  error)
+    !write (*, '(a)', advance='no') ESC // '[44;1m' // ESC // '[38;5;200m' // 'Hello, World!'
+    write (*, '(a)', advance='no') ESC // COLORS(time_color+1)
 
-    print *,"nspace: ", nspace
-    call create_pset_grid(session, "mpi://WORLD", mcomm, nspace, space_dim, &
-         space_comm, space_color, time_comm, time_color, time_pset)
+    call mpi_comm_size(time_comm, ntime, ierr)
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm size fail, error=',ierr)
+
+    call mpi_barrier(space_comm, ierr);
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
+
+
+
+    ! determine if dynamic
+    call check_dynamic(session, is_dynamic)
 
     !>  Set up communicator
-    call pf_mpi_create(comm, time_comm)
-    
+    call pf_dynprocs_create(dynprocs, session, time_pset, "mpi://WORLD", time_color)
 
+    !>  Create the pfasst structure
+    call pf_pfasst_create_dynamic(pf, dynprocs, fname=pf_fname)
     pf%use_rk_stepper = .false.
     pf%use_sdc_sweeper = .true.
 
-    !>  Create the pfasst structure
-    call pf_pfasst_create(pf, comm, fname=pf_fname)
+    !> Update space_color if dynamic
+    if (is_dynamic) then
+        space_color = pf%rank
+    end if
 
+    !> some more initializations
     spacial_coarsen_flag = 0
     call mpi_barrier(space_comm, ierr);
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
-    call PfasstHypreInit(pf, mg_ld, lev_shape, space_comm, time_color, spacial_coarsen_flag)
+    call PfasstHypreInit(pf, lev_shape, space_comm, spacial_coarsen_flag)
     print *, "PfasstHypreInit done"
     print *,time_color,space_color,pf%rank
 
     ! hooks
     call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
 
+    ! setup hooks
     if (dump_values) then
+        print *, "Setting globalvars"
         ! Save some global variables for the dump hook
         call set_global_str("dump_dir", dump_dir)
         call set_global_int("time_color", time_color)
@@ -136,46 +160,50 @@ contains
     end if
 
     !>  Output run parameters
-    if (space_color == 0 .and. time_color == 0) then
+    if (.not. is_dynamic .and. space_color == 0 .and. time_color == 0) then
         call print_loc_options(pf,un_opt=6)
     end if
 
-    level_index = pf%nlevels
+
     !> Set the initial condition
+    level_index = pf%nlevels
     call hvf%create_single(y_0_base, level_index, lev_shape(pf%nlevels,:))
     call hvf%create_single(y_end_base, level_index, lev_shape(pf%nlevels,:))
     y_0 = cast_as_hypre_vector(y_0_base)
     y_end = cast_as_hypre_vector(y_end_base)
-    call initial(y_0)
 
-!    ! dump initial values
-!    if (dump_values) then
-!        write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
-!            trim(adjustl(dump_dir)), "/dump_step", 0, &
-!            "_time", time_color, "_space", space_color, "_level", 2, ".csv"
-!        call y_0%dump(fname)
-!    end if
-!
-!    print *, "initial done"
-!
-!
-!    !> Do the PFASST time stepping
-!    call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end)
-!    if (pf%rank .eq. pf%comm%nproc-1) call y_end%eprint()
-!
-!    if (dump_values .and. space_color == ntime-1) then
-!       write(fname, "(A, A,i1,A)") trim(adjustl(dump_dir)), "/final_dump_", time_color, ".csv"
-!       call y_end%dump(fname)
-!    end if
+    if (.not. is_dynamic) then
+        call initial(y_0)
+        ! dump initial values
+        if (dump_values) then
+            write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
+                trim(adjustl(dump_dir)), "/dump_step", 0, &
+                "_time", time_color, "_space", space_color, "_level", 2, ".csv"
+            call y_0%dump(fname)
+        end if
+        print *, "initial done"
+    end if
 
-    !>  Wait for everyone to be done
-    call mpi_barrier(mcomm, ierr)
-    
+
+    !> Do the PFASST time stepping
+    call pf_pfasst_run(pf, y_0, dt, Tfin, nsteps, y_end, &
+                       join_existing=is_dynamic, premature_exit=premature_exit)
+
+    if (.not. premature_exit) then
+       if (pf%state%step .eq. nsteps-1) call y_end%eprint()
+
+       !>  Wait for everyone to be done
+       call mpi_barrier(pf%comm%comm, ierr)
+    end if
+
+
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
 
-    !> Free the communicator
-    call mpi_comm_free(mcomm, ierr)
+    call pf_dynprocs_destroy(dynprocs)
+
+    !> Free the space communicator
+    call mpi_comm_free(space_comm, ierr)
 
   end subroutine run_pfasst
 end program

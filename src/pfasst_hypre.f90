@@ -8,11 +8,10 @@ module pfasst_hypre
   implicit none
 contains
 
-  subroutine PfasstHypreInit(pf, mg_ld, lev_shape, space_comm, time_color, spacial_coarsen_flag)
+  subroutine PfasstHypreInit(pf, lev_shape, space_comm, spacial_coarsen_flag)
     type(pf_pfasst_t), intent(inout) :: pf
-    type(mgrit_level_data), allocatable, intent(inout) :: mg_ld(:)
     integer, allocatable, intent(inout) :: lev_shape(:,:)
-    integer, intent(in) :: space_comm, time_color
+    integer, intent(in) :: space_comm
     integer, intent(in) :: spacial_coarsen_flag
     
     type(pf_comm_t) :: comm

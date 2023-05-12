@@ -4,6 +4,23 @@ module pf_space_comm
   implicit none
 contains
 
+   subroutine check_dynamic(session, is_dynamic)
+     integer, intent(in) :: session
+     logical, intent(out) :: is_dynamic
+     integer info,ierr
+     character(len=20) :: boolean_string
+     logical :: contains_key
+
+    ! Get the info from our mpi://WORLD pset
+    call MPI_Session_get_pset_info(session, "mpi://WORLD", info, ierr)
+
+    ! get value for the 'mpi_dyn' key -> if true, this process was added dynamically
+    call MPI_Info_get(info, "mpi_dyn", 20, boolean_string, contains_key, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
+
+    is_dynamic = (contains_key .and. trim(boolean_string) == "True")
+   end subroutine check_dynamic
+
    subroutine psetop2str(psetop, str)
      integer, intent(in) :: psetop
      character(len=*), intent(out) :: str
@@ -19,17 +36,16 @@ contains
        "MPI_PSETOP_UNION       ", &
        "MPI_PSETOP_DIFFERENCE  ", &
        "MPI_PSETOP_INTERSECTION", &
-       "MPI_PSETOP_MULTI       " &
+       "MPI_PSETOP_SPLIT       " &
      ]
 
      str = mystrings(psetop+1)
    end subroutine psetop2str
 
-  subroutine create_pset_grid(session, base_pset, base_comm, nspace, space_dim, &
+  subroutine create_pset_grid(session, base_pset, nspace, space_dim, &
                               space_comm, space_color, time_comm, time_color, time_pset)
     integer, intent(in) :: session
     character(len=*) , intent(in) :: base_pset
-    integer, intent(in) :: base_comm
     integer, intent(in) :: nspace
     integer, intent(in) :: space_dim
 
@@ -44,7 +60,8 @@ contains
     character(len=:), allocatable  :: splitstr
     character(len=20)  :: tmpstr
 
-    real(pfdp) :: nspace_real
+    integer :: base_comm
+    integer :: base_group
     integer :: base_size, base_rank
     integer :: noutput
     integer :: mgroup
@@ -57,14 +74,12 @@ contains
     integer :: op
     logical :: contains_key
 
-    ! for now, nspace must be a perfect square
-    if (space_dim .eq. 2) then
-       nspace_real = sqrt(real(nspace))
-       if (nspace_real .ne. nint(nspace_real)) then
-          print'(a)', 'ERROR: create_simple_communicators: nspace must be perfect square.'
-          stop
-       end if
-    end if
+    call mpi_group_from_session_pset(session, base_pset, base_group, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group from pset fail, error=',ierr)
+    call mpi_comm_create_from_group(base_group, base_pset, MPI_INFO_NULL, MPI_ERRORS_RETURN, base_comm, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm create from group fail, error=',ierr)
+    call mpi_group_free(base_group, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group free fail, error=',ierr)
 
     call mpi_comm_size(base_comm, base_size, ierr)
     call mpi_comm_rank(base_comm, base_rank, ierr)
@@ -72,6 +87,7 @@ contains
     ntime = base_size / nspace
 
     if (base_rank == 0) then
+       print *, "I will do the split"
        ! prepare split arguments
        call mpi_info_create(info, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info create fail, error=',ierr)
@@ -121,8 +137,7 @@ contains
     ! create communicator from time_pset
     call mpi_group_from_session_pset(session, time_pset, mgroup, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group from pset fail, error=',ierr)
-    call mpi_barrier(base_comm, ierr)
-    call mpi_comm_create_from_group(mgroup, "showcase", MPI_INFO_NULL, MPI_ERRORS_RETURN, time_comm, ierr)
+    call mpi_comm_create_from_group(mgroup, time_pset, MPI_INFO_NULL, MPI_ERRORS_RETURN, time_comm, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm create from group fail, error=',ierr)
     call mpi_group_free(mgroup, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi group free fail, error=',ierr)

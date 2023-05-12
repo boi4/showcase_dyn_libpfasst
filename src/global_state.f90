@@ -47,9 +47,13 @@ contains
 
    subroutine set_global_int(key, val)
       character(len=*), intent(in) :: key
+      character(c_char), dimension(len(key)+1) :: key_c
       integer, intent(in) :: val
 
-      call set_global_int_c(key, val)
+      ! Convert key to key_c
+      key_c = transfer(trim(key)//char(0), key_c)
+
+      call set_global_int_c(key_c, val)
    end subroutine set_global_int
 
 

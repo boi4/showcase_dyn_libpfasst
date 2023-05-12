@@ -7,7 +7,8 @@
     nlevels = 2 !  must be set
 
     !niters = 20  !  default is 5
-    niters = 20  !  default is 5
+    !niters = 20  !  default is 5
+    niters = 5
     nnodes = 2 3
 
     nsweeps_pred= 1 1 
@@ -34,11 +35,10 @@
 &PARAMS
 
     T0 = 0.0
-    Tfin = 10
-    nsteps = 8
+    Tfin = 100
+    nsteps = 20
     num_grid_points = 128
     nspace = 4
-    ntime = 2
     init_cond = 50.0
     space_dim = 2
     max_space_v_cycles = 50
