@@ -19,12 +19,13 @@ module probin
   integer, save :: ark_stat
   integer, save :: rk_order
   logical, save :: dump_values  ! whether to dump the values
+  logical, save :: color_output  ! whether to color stdouts differently
   character(len=1000), save :: dump_dir  ! where to dump files
   character(len=128), save :: pfasst_nml  ! file for reading pfasst parameters
 
   namelist /params/ space_dim, num_grid_points, init_cond, nspace, dt, T0, Tfin, nsteps, pfasst_nml, max_space_v_cycles
   namelist /params/ mgrit_n_init, mgrit_refine_factor, imex_stat, ark_stat, nsteps_rk, FAS_flag, rk_order, FCF_flag
-  namelist /params/ dump_dir, dump_values
+  namelist /params/ dump_dir, dump_values, color_output
 
 contains
   
@@ -70,6 +71,7 @@ contains
     FAS_flag = .false.
     FCF_flag = .true.
 
+    color_output = .false.
     dump_values = .false.
     dump_dir = "dump"
     

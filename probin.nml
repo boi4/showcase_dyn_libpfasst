@@ -60,5 +60,5 @@
     FAS_flag = .false.
     FCF_flag = .false.
 
-    dump_values = .true.
+    dump_values = .false.
 /

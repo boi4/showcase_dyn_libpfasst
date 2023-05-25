@@ -16,7 +16,7 @@ program main
   integer :: session
 
   !> Initialize MPI Session
-  call mpi_session_init(MPI_INFO_NULL, MPI_ERRHANDLER_NULL, session, ierr)
+  call mpi_session_init(MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, session, ierr)
   if (ierr /= 0) &
       stop "ERROR: Can't initialize MPI."
 
@@ -71,6 +71,7 @@ contains
     integer :: spacial_coarsen_flag
     character(len=1000) :: fname
     integer :: ntime
+    character(len=MPI_MAX_PSET_NAME_LEN)  :: space_pset
     character(len=MPI_MAX_PSET_NAME_LEN)  :: time_pset
     logical :: is_dynamic
     logical :: premature_exit
@@ -104,10 +105,11 @@ contains
 
     ! split up processes into grid
     call create_pset_grid(session, "mpi://WORLD", nspace, space_dim, &
-                          space_comm, space_color, time_comm, time_color, time_pset)
+                          space_comm, space_color, space_pset, time_comm, time_color, time_pset)
 
-    !write (*, '(a)', advance='no') ESC // '[44;1m' // ESC // '[38;5;200m' // 'Hello, World!'
-    write (*, '(a)', advance='no') ESC // COLORS(time_color+1)
+    if (color_output) then
+        write (*, '(a)', advance='no') ESC // COLORS(time_color+1)
+    end if
 
     call mpi_comm_size(time_comm, ntime, ierr)
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm size fail, error=',ierr)
@@ -118,10 +120,10 @@ contains
 
 
     ! determine if dynamic
-    call check_dynamic(session, is_dynamic)
+    call pf_dynprocs_check_dynamic(session, is_dynamic)
 
     !>  Set up communicator
-    call pf_dynprocs_create(dynprocs, session, time_pset, "mpi://WORLD", time_color)
+    call pf_dynprocs_create(dynprocs, session, time_pset, "mpi://WORLD", space_pset)
 
     !>  Create the pfasst structure
     call pf_pfasst_create_dynamic(pf, dynprocs, fname=pf_fname)
@@ -129,9 +131,15 @@ contains
     pf%use_sdc_sweeper = .true.
 
     !> Update space_color if dynamic
+    !> Only relevant for debugging
     if (is_dynamic) then
         space_color = pf%rank
     end if
+
+    print *, "============================================================================="
+    print *, "space_pset = ", time_pset, ", time_pset = ", space_pset
+    print *, "space_color = ", space_color, ", time_color = ", time_color
+    print *, "============================================================================="
 
     !> some more initializations
     spacial_coarsen_flag = 0
@@ -141,23 +149,27 @@ contains
     print *, "PfasstHypreInit done"
     print *,time_color,space_color,pf%rank
 
-    ! hooks
+    !> setup hooks
     call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
 
-    ! setup hooks
     if (dump_values) then
+        dump_dir = trim(dump_dir)
         print *, "Setting globalvars"
+        print *, dump_dir
         ! Save some global variables for the dump hook
         call set_global_str("dump_dir", dump_dir)
         call set_global_int("time_color", time_color)
         call set_global_int("space_color", space_color)
 
-        ! TODO: what about spaces in dump_dir?
+        ! fails for spaces in dump dir
         call system('mkdir -p ' // trim(adjustl(dump_dir)))
 
         call pf_add_hook(pf, -1, PF_POST_BLOCK, dump_hook)
-        !call pf_add_hook(pf, -1, PF_POST_PREDICTOR, dump_hook)
     end if
+
+
+    !> setup hook to control how to resize libpfasst
+    call pf_add_hook(pf, -1, PF_PRE_POT_RESIZE, resize_decider)
 
     !>  Output run parameters
     if (.not. is_dynamic .and. space_color == 0 .and. time_color == 0) then
@@ -176,9 +188,10 @@ contains
         call initial(y_0)
         ! dump initial values
         if (dump_values) then
-            write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
-                trim(adjustl(dump_dir)), "/dump_step", 0, &
+            write(fname, "(A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
+                trim(adjustl(dump_dir)) // trim("/dump_step"), 0, &
                 "_time", time_color, "_space", space_color, "_level", 2, ".csv"
+            print *, "Dumping to ", trim(fname)
             call y_0%dump(fname)
         end if
         print *, "initial done"

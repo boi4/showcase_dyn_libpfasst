@@ -20,6 +20,32 @@ module hooks
   end interface
 contains
 
+
+  !>  Resize libpfasst randomly
+  subroutine resize_decider(pf, level_index)
+    type(pf_pfasst_t), intent(inout) :: pf
+    integer, intent(in) :: level_index
+
+    !integer :: max_timesteps = 8
+    integer :: max_timesteps = 6
+    integer :: cur_timesteps
+    integer :: new_timesteps
+    real :: u
+
+    ! we only can set resize_delta at the process that calls the psetop
+    if (pf%rank == 0 .and. ((.not. pf%dynprocs%global_used) .or. pf%dynprocs%horizontal_rank == 0)) then
+        cur_timesteps = pf%comm%nproc
+        ! get random number between 2 and max_timesteps
+        ! and subtract cur_timesteps from it
+        call random_number(u)
+        new_timesteps = 2 + floor(u * (max_timesteps +1 - 2))
+        print *, "Trying to resize to ", new_timesteps, " parallel timesteps"
+        !pf%dynprocs%resize_delta = new_timesteps - cur_timesteps
+        pf%dynprocs%resize_delta = -1
+        print *, "Set resize_delta to ", pf%dynprocs%resize_delta
+    end if
+  end subroutine resize_decider
+
   !>  Output the error and residual in the solution
   subroutine echo_error(pf, level_index)
     type(pf_pfasst_t), intent(inout) :: pf
@@ -29,7 +55,7 @@ contains
     real(pfdp) :: maxerr, error 
     real(pfdp) :: residual
     class(hypre_vector_encap), pointer :: y_end
-    integer :: nproc, rank, ierr
+    integer :: ierr
 
     !> Get the solution at the end of this step
     y_end => cast_as_hypre_vector(pf%levels(level_index)%qend)
@@ -41,9 +67,6 @@ contains
     pf%results%residuals(level_index,pf%state%pfblock,pf%state%iter+1,pf%state%sweep) = residual
     pf%results%errors(level_index,pf%state%pfblock,pf%state%iter+1,pf%state%sweep) = error
 
-    !call mpi_comm_rank(pf%comm%comm, rank, ierr)
-    !call mpi_comm_size(pf%comm%comm, nproc, ierr)
-    
 
     if ((pf%rank == pf%comm%nproc-1) .and. (level_index == pf%nlevels) .and. (pf%state%iter .gt. 0) &
         .and. ((pf%state%step .eq. pf%state%nsteps-1))) then
@@ -68,8 +91,8 @@ contains
     call get_global_int("space_color", space_color)
     print *, "Dumping, space color=", space_color, " time color=", time_color
 
-    write(fname, "(A,A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
-         trim(adjustl(dump_dir)), "/dump_step", pf%state%step+1, &
+    write(fname, "(A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
+         trim(adjustl(dump_dir)) // trim("/dump_step"), pf%state%step+1, &
          "_time", time_color, "_space", space_color, "_level", level_index, ".csv"
 
     values = cast_as_hypre_vector(pf%levels(level_index)%qend)
@@ -108,80 +131,5 @@ contains
     qhr => cast_as_hypre_vector(q)
     call qhr%eprint()
   end subroutine print_sol_encap
-
-
-  ! subroutine print_(pf, level_index)
-  !   type(pf_pfasst_t), intent(inout) :: pf
-  !   integer, intent(in) :: level_index
-
-  !   class(hypre_vector_encap), pointer :: qhr
-  !   integer :: j
-
-
-  !   do j = 1, pf%levels(1)%nnodes-1
-  !     qhr => cast_as_hypre_vector(pf%levels(1)%I(j))
-  !     !> Get the solution at the end of this step
-  !     print *, j
-  !     call qhr%eprint()
-  !   end do
-  !     ! do j = 1, pf%levels(1)%nnodes-1
-  !     !   qhr => cast_as_hypre_vector(pf%levels(1)%I(j))
-  !     !   !> Get the solution at the end of this step
-  !     !   print *, j
-  !     !   call qhr%eprint()
-  !     ! end do
-  ! end subroutine print_level_vals
-
-  subroutine print_level_valshelper(sweeper)
-    class(pf_sweeper_t), target, intent(in) :: sweeper
-
-    class(hypre_vector_encap), pointer :: qhr
-    type(my_sweeper_t), pointer :: my_sweeper
-
-    print *, "rhs"
-    select type(sweeper)
-    type is (my_sweeper_t)
-      my_sweeper => sweeper
-    end select
-    qhr => cast_as_hypre_vector(my_sweeper%rhs)
-    call qhr%eprint()
-  end subroutine print_level_valshelper
-
-  subroutine print_level_vals(pf, level_index)
-    type(pf_pfasst_t), intent(inout) :: pf
-    integer, intent(in) :: level_index
-
-    class(hypre_vector_encap), pointer :: qhr
-
-    print *, "Q(1)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%Q(1))
-    call qhr%eprint()
-    print *, "Q(2)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%Q(2))
-    call qhr%eprint()
-    print *, "F(1,1)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%F(1,1))
-    call qhr%eprint()
-    print *, "F(1,2)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%F(1,2))
-    call qhr%eprint()
-    print *, "F(2,1)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%F(2,1))
-    call qhr%eprint()
-    print *, "F(2,2)"
-    qhr => cast_as_hypre_vector(pf%levels(level_index)%F(2,2))
-    call qhr%eprint()
-
-    call print_level_valshelper(pf%levels(level_index)%ulevel%sweeper)
-
-  end subroutine print_level_vals
-
-
-  subroutine pstep(pf, level_index)
-    type(pf_pfasst_t), intent(inout) :: pf
-    integer, intent(in) :: level_index
-
-    print *,pf%state%step
-  end subroutine pstep
 
 end module hooks
