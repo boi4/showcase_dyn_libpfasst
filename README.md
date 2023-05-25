@@ -13,7 +13,7 @@ Here is a little animation that explains how the solver works.
 Note that the details of the PFASST algorithm are not shown.
 Also note that with a recent change the splits have been reversed, first we split the grid into space psets and then into time psets, which leads to a "space-major" layout (0,1,2,4 are all at the bottom and so on). In the video, this is not yet reflected.
 
-![video](res/HeatEqu.mp4)
+https://github.com/boi4/showcase_dyn_libpfasst/assets/33987679/24e5223a-665d-4f63-82b6-a453800c5ad4
 
 
 ### Compilation instructions
