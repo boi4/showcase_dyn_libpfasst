@@ -5,38 +5,7 @@ module pf_space_comm
   implicit none
 contains
 
-   ! subroutine print_my_psets(session)
-   !   integer, intent(in) :: session
-   !   character(len=MPI_MAX_PSET_NAME_LEN) pset
-   !   integer :: n
-   !   integer :: len
-   !   integer :: ierr
-   !   integer :: i
-   !   integer :: info
-   !   character(len=20)  :: tmpstr
-   !   logical :: contains_key
-
-   !   call mpi_session_get_num_psets(session, MPI_INFO_NULL, n, ierr)
-   !   if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get num psets fail, error=',ierr)
-
-   !   do i = 0, n-1
-   !     len = MPI_MAX_PSET_NAME_LEN
-   !     call mpi_session_get_nth_pset(session, MPI_INFO_NULL, i, len, pset, ierr)
-   !     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset name fail, error=',ierr)
-
-   !     call mpi_session_get_pset_info(session, pset, info, ierr)
-   !     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset info fail, error=',ierr)
-   !     call mpi_info_get(info, "mpi_included", 20, tmpstr, contains_key, ierr)
-   !     if (ierr /=0 .OR. .not. contains_key) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
-
-   !     if (tmpstr == "True") then
-   !        print *, "pset ", i, ": ", trim(pset)
-   !     end if
-   !   end do
-   ! end subroutine print_my_psets
-
-
-  !> TODO: add comment
+  !> This function will creat a grid of process sets as seen below
   !>
   !>    example ntime: 4, nspace: 3
   !>                         time psets (time color 0,1,2,3 respectively)
@@ -230,16 +199,16 @@ contains
     print *, "time_color=", time_color
     print *, "time_pset=", trim(time_pset)
 
-    ! double check we are actualy part of these psets
-    call pf_dynprocs_pset_contains_me(session, space_pset, contains_me)
-    if (.not. contains_me) then
-       call pf_stop(__FILE__,__LINE__,"Error: space pset does not contain me")
-    end if
+    !! double check we are actualy part of these psets
+    !call pf_dynprocs_pset_contains_me(session, space_pset, contains_me)
+    !if (.not. contains_me) then
+    !   call pf_stop(__FILE__,__LINE__,"Error: space pset does not contain me")
+    !end if
 
-    call pf_dynprocs_pset_contains_me(session, time_pset, contains_me)
-    if (.not. contains_me) then
-       call pf_stop(__FILE__,__LINE__,"Error: time pset does not contain me")
-    end if
+    !call pf_dynprocs_pset_contains_me(session, time_pset, contains_me)
+    !if (.not. contains_me) then
+    !   call pf_stop(__FILE__,__LINE__,"Error: time pset does not contain me")
+    !end if
 
     deallocate(time_psets)
     deallocate(space_psets)
@@ -267,5 +236,67 @@ contains
     call mpi_barrier(space_comm, ierr)
     call mpi_barrier(base_comm, ierr)
   end subroutine create_pset_grid
+
+
+
+
+
+
+
+  ! Debugging
+
+  subroutine print_my_psets(session)
+    integer, intent(in) :: session
+    character(len=MPI_MAX_PSET_NAME_LEN) pset
+    integer :: n
+    integer :: len
+    integer :: ierr
+    integer :: i
+    integer :: info
+    character(len=20)  :: tmpstr
+    logical :: contains_key
+
+    call mpi_session_get_num_psets(session, MPI_INFO_NULL, n, ierr)
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get num psets fail, error=',ierr)
+
+    do i = 0, n-1
+      len = MPI_MAX_PSET_NAME_LEN
+      call mpi_session_get_nth_pset(session, MPI_INFO_NULL, i, len, pset, ierr)
+      if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset name fail, error=',ierr)
+
+      call mpi_session_get_pset_info(session, pset, info, ierr)
+      if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset info fail, error=',ierr)
+      call mpi_info_get(info, "mpi_included", 20, tmpstr, contains_key, ierr)
+      if (ierr /=0 .OR. .not. contains_key) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
+
+      if (tmpstr == "True") then
+         print *, "pset ", i, ": ", trim(pset)
+      else
+         print *, "//pset ", i, ": ", trim(pset)
+      end if
+    end do
+  end subroutine print_my_psets
+
+ subroutine get_pset_size(session, global_comm, pset, size)
+   integer, intent(in) :: session
+   integer, intent(in) :: global_comm
+   character(len=MPI_MAX_PSET_NAME_LEN), intent(in) :: pset
+   integer, intent(out) :: size
+
+   logical :: contains_me
+   integer :: union_size
+   integer :: indicator
+   integer :: ierr
+   call pf_dynprocs_pset_contains_me(session, pset, contains_me)
+   if (contains_me) then
+       indicator = 1
+   else
+       indicator = 0
+   end if
+
+   call mpi_allreduce(indicator, size, 1, MPI_INTEGER, MPI_SUM, global_comm, ierr)
+   if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi allreduce fail, error=',ierr)
+  end subroutine get_pset_size
+
 
 end module pf_space_comm
