@@ -40,8 +40,7 @@ contains
         call random_number(u)
         new_timesteps = 2 + floor(u * (max_timesteps +1 - 2))
         print *, "Trying to resize to ", new_timesteps, " parallel timesteps"
-        !pf%dynprocs%resize_delta = new_timesteps - cur_timesteps
-        pf%dynprocs%resize_delta = -1
+        pf%dynprocs%resize_delta = new_timesteps - cur_timesteps
         print *, "Set resize_delta to ", pf%dynprocs%resize_delta
     end if
   end subroutine resize_decider

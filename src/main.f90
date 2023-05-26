@@ -149,7 +149,7 @@ contains
     print *, "PfasstHypreInit done"
     print *,time_color,space_color,pf%rank
 
-    !> setup hooks
+    !> echo error after each hook
     call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
 
     if (dump_values) then

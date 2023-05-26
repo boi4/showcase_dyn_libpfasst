@@ -193,11 +193,13 @@ contains
     time_pset = time_psets(time_color+1)
 
     ! print *, "nspace=", nspace
-    print *, "space_color=", space_color
-    print *, "space_pset=", trim(space_pset)
+    ! print *, "my space_color=", space_color
+    ! print *, "my space_pset=", trim(space_pset)
     ! print *, "ntime=", ntime
-    print *, "time_color=", time_color
-    print *, "time_pset=", trim(time_pset)
+    ! print *, "my time_color=", time_color
+    ! print *, "my time_pset=", trim(time_pset)
+
+    ! call print_my_psets(session)
 
     !! double check we are actualy part of these psets
     !call pf_dynprocs_pset_contains_me(session, space_pset, contains_me)
