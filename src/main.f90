@@ -146,8 +146,8 @@ contains
     call mpi_barrier(space_comm, ierr);
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
     call PfasstHypreInit(pf, lev_shape, space_comm, spacial_coarsen_flag)
-    print *, "PfasstHypreInit done"
-    print *,time_color,space_color,pf%rank
+    ! print *, "PfasstHypreInit done"
+    ! print *,time_color,space_color,pf%rank
 
     !> echo error after each hook
     call pf_add_hook(pf, -1, PF_POST_BLOCK, echo_error)
@@ -155,7 +155,6 @@ contains
     if (dump_values) then
         dump_dir = trim(dump_dir)
         print *, "Setting globalvars"
-        print *, dump_dir
         ! Save some global variables for the dump hook
         call set_global_str("dump_dir", dump_dir)
         call set_global_int("time_color", time_color)
@@ -203,7 +202,7 @@ contains
                        join_existing=is_dynamic, premature_exit=premature_exit)
 
     if (.not. premature_exit) then
-       if (pf%state%step .eq. nsteps-1) call y_end%eprint()
+       !if (pf%state%step .eq. nsteps-1) call y_end%eprint()
 
        !>  Wait for everyone to be done
        call mpi_barrier(pf%comm%comm, ierr)

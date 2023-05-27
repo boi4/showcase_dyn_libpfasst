@@ -35,10 +35,10 @@ contains
     ! we only can set resize_delta at the process that calls the psetop
     if (pf%rank == 0 .and. ((.not. pf%dynprocs%global_used) .or. pf%dynprocs%horizontal_rank == 0)) then
         cur_timesteps = pf%comm%nproc
-        ! get random number between 2 and max_timesteps
+        ! get random number between 1 and max_timesteps
         ! and subtract cur_timesteps from it
         call random_number(u)
-        new_timesteps = 2 + floor(u * (max_timesteps +1 - 2))
+        new_timesteps = 1 + floor(u * (max_timesteps +1 - 1))
         print *, "Trying to resize to ", new_timesteps, " parallel timesteps"
         pf%dynprocs%resize_delta = new_timesteps - cur_timesteps
         print *, "Set resize_delta to ", pf%dynprocs%resize_delta
@@ -88,7 +88,6 @@ contains
     call get_global_str("dump_dir", dump_dir)
     call get_global_int("time_color", time_color)
     call get_global_int("space_color", space_color)
-    print *, "Dumping, space color=", space_color, " time color=", time_color
 
     write(fname, "(A,i5.5,A,i4.4,A,i4.4,A,i4.4,A)") &
          trim(adjustl(dump_dir)) // trim("/dump_step"), pf%state%step+1, &
