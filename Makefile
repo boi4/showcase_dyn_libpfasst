@@ -9,7 +9,6 @@ CPP_COMPILE = mpic++
 LIBPFASST ?= ../LibPFASST/
 
 CPP_SRC_DIR=src/
-export USE_HYPRE=TRUE
 
 CPP_FILES = \
         $(CPP_SRC_DIR)global_fortran_state.cpp \
@@ -27,7 +26,6 @@ BUILDDIR = build
 EXE = main.exe
 
 # Must use Makefile.defaults included in this repo
-# will set debug flags if DEBUG=TRUE
 include $(LIBPFASST)/Makefile.defaults
 
 FSRC = src/global_state.f90 src/comm.f90 src/level.f90 src/sweeper.f90 src/hooks.f90 src/probin.f90 src/encap.f90 src/pfasst_hypre.f90 src/main.f90
@@ -35,6 +33,8 @@ CSRC = src/global_fortran_state.cpp src/hypre_struct.cpp src/hypre_vector.cpp sr
 
 OBJ  = $(subst src, build,$(FSRC:.f90=.o))
 OBJ += $(subst src, build,$(CSRC:.cpp=.o))
+
+LDFLAGS += $(shell mpic++ --showme:link) ./hypre/src/hypre/lib/libHYPRE.a -lstdc++
 
 FFLAGS  += -I$(LIBPFASST)/include -g
 
@@ -45,7 +45,7 @@ hypre_cpp:
 	$(CPP_COMPILE) -c $(CPP_FILES) $(CPP_INCLUDE) $(CPPFLAGS)
 	mv $(subst src, .,$(CPP_FILES:.cpp=.o)) build/
 
-VPATHS = src 
+VPATHS = src
 
 include $(LIBPFASST)/Makefile.rules
 
