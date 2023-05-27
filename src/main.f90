@@ -137,7 +137,7 @@ contains
     end if
 
     print *, "============================================================================="
-    print *, "space_pset = ", time_pset, ", time_pset = ", space_pset
+    print *, "space_pset = ", trim(time_pset), ", time_pset = ", trim(space_pset)
     print *, "space_color = ", space_color, ", time_color = ", time_color
     print *, "============================================================================="
 
