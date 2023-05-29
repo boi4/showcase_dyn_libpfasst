@@ -102,11 +102,12 @@ contains
 
        call mpi_info_set(info, "mpi_part_sizes", splitstr, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
-       noutput = nspace
+       noutput = ntime
        op = MPI_PSETOP_SPLIT
 
        ! do the split
        print *, "Splitting ", trim(base_pset), " into ", trim(splitstr)
+       print *, "base_size is ", base_size
        call mpi_session_dyn_v2a_psetop(session, op, base_pset, 1, space_psets, noutput, info, ierr)
        call mpi_info_free(info, ierr2)
        if (ierr /=0 .or. ierr2 /= 0) call pf_stop(__FILE__,__LINE__,'mpi psetop split operation failed, error=',ierr,ierr2)
