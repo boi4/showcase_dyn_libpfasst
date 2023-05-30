@@ -114,6 +114,9 @@ contains
     call mpi_comm_size(time_comm, ntime, ierr)
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm size fail, error=',ierr)
 
+    call mpi_comm_free(time_comm, ierr)
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
+
     call mpi_barrier(space_comm, ierr);
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
 
@@ -208,14 +211,18 @@ contains
        call mpi_barrier(pf%comm%comm, ierr)
     end if
 
+    !> free time communicator
+    call mpi_comm_free(pf%comm%comm, ierr)
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
+
+    !> free space communicator
+    call mpi_comm_free(space_comm, ierr)
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
 
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
 
     call pf_dynprocs_destroy(dynprocs)
-
-    !> Free the space communicator
-    call mpi_comm_free(space_comm, ierr)
 
   end subroutine run_pfasst
 end program
