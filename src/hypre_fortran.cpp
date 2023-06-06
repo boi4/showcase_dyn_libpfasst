@@ -218,6 +218,7 @@ void HypreSolverFEval(HypreSolver *hypre_solver, HypreVector *y, double t,
     }
   }
   f->SetBoxValues(f_values);
+  free(f_values);
 }
 
 void HypreSolverFComp(HypreSolver *hypre_solver, HypreVector *y, double t,
